@@ -1,6 +1,7 @@
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
@@ -12,9 +13,16 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 public class LoginPage {
     private Stage primaryStage;
     private BorderPane view;
+    private GridPane formGrid;
 
     public LoginPage(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -36,55 +44,142 @@ public class LoginPage {
         titleBox.setPadding(new Insets(20, 0, 20, 0));
         borderPane.setTop(titleBox);
 
-        // Login form
-        GridPane grid = new GridPane();
-        grid.setAlignment(Pos.CENTER);
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(25, 25, 25, 25));
-
-        Label usernameLabel = new Label("Username:");
-        grid.add(usernameLabel, 0, 1);
-
-        TextField usernameField = new TextField();
-        grid.add(usernameField, 1, 1);
-
-        Label passwordLabel = new Label("Password:");
-        grid.add(passwordLabel, 0, 2);
-
-        PasswordField passwordField = new PasswordField();
-        grid.add(passwordField, 1, 2);
+        // Buttons for Login and Register
+        HBox buttonBox = new HBox(20);
+        buttonBox.setAlignment(Pos.CENTER);
+        buttonBox.setPadding(new Insets(20, 0, 20, 0));
 
         Button loginButton = new Button("Login");
         loginButton.setPrefWidth(150);
-        loginButton.setOnAction(e -> handleLogin(usernameField.getText(), passwordField.getText()));
-        HBox loginBtnBox = new HBox(10);
-        loginBtnBox.setAlignment(Pos.BOTTOM_RIGHT);
-        loginBtnBox.getChildren().add(loginButton);
-        grid.add(loginBtnBox, 1, 4);
+        loginButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px;");
+        loginButton.setOnAction(e -> showLoginForm());
 
         Button registerButton = new Button("Register");
         registerButton.setPrefWidth(150);
-        registerButton.setOnAction(e -> handleRegister(usernameField.getText(), passwordField.getText()));
-        HBox registerBtnBox = new HBox(10);
-        registerBtnBox.setAlignment(Pos.BOTTOM_LEFT);
-        registerBtnBox.getChildren().add(registerButton);
-        grid.add(registerBtnBox, 0, 4);
+        registerButton.setStyle("-fx-background-color: #2b7087; -fx-text-fill: white; -fx-font-size: 14px;");
+        registerButton.setOnAction(e -> showRegisterForm());
 
-        borderPane.setCenter(grid);
+        buttonBox.getChildren().addAll(loginButton, registerButton);
+        borderPane.setCenter(buttonBox);
+
+        // Form Grid
+        formGrid = new GridPane();
+        formGrid.setAlignment(Pos.CENTER);
+        formGrid.setHgap(10);
+        formGrid.setVgap(10);
+        formGrid.setPadding(new Insets(25, 25, 25, 25));
+
+        borderPane.setBottom(formGrid);
 
         return borderPane;
     }
 
+    private void showLoginForm() {
+        formGrid.getChildren().clear();
+
+        Label usernameLabel = new Label("Username:");
+        formGrid.add(usernameLabel, 0, 0);
+
+        TextField usernameField = new TextField();
+        formGrid.add(usernameField, 1, 0);
+
+        Label passwordLabel = new Label("Password:");
+        formGrid.add(passwordLabel, 0, 1);
+
+        PasswordField passwordField = new PasswordField();
+        formGrid.add(passwordField, 1, 1);
+
+        Button submitButton = new Button("Submit");
+        submitButton.setPrefWidth(150);
+        submitButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px;");
+        submitButton.setOnAction(e -> handleLogin(usernameField.getText(), passwordField.getText()));
+        formGrid.add(submitButton, 1, 2);
+    }
+
+    private void showRegisterForm() {
+        formGrid.getChildren().clear();
+
+        Label usernameLabel = new Label("Enter a unique Username:");
+        formGrid.add(usernameLabel, 0, 0);
+
+        TextField usernameField = new TextField();
+        formGrid.add(usernameField, 1, 0);
+
+        Label passwordLabel = new Label("Password:");
+        formGrid.add(passwordLabel, 0, 1);
+
+        PasswordField passwordField = new PasswordField();
+        formGrid.add(passwordField, 1, 1);
+
+        Button submitButton = new Button("Submit and Register Me");
+        submitButton.setPrefWidth(150);
+        submitButton.setStyle("-fx-background-color: #2b7087; -fx-text-fill: white; -fx-font-size: 11px;");
+        submitButton.setOnAction(
+                e -> handleRegister(usernameField.getText(), passwordField.getText()));
+        formGrid.add(submitButton, 1, 3);
+    }
+
     private void handleLogin(String username, String password) {
-        // Handle login logic here, then transition to DashboardPage
-        primaryStage.setScene(new Scene(new DashboardPage(primaryStage, username).getView(), 800, 600));
-        primaryStage.setFullScreen(true);
+        if (validateLogin(username, password)) {
+            primaryStage.setScene(new Scene(new DashboardPage(primaryStage, username).getView(), 800, 600));
+            primaryStage.setFullScreen(true);
+        } else {
+            showAlert("Login Failed", "Invalid username or password.");
+        }
     }
 
     private void handleRegister(String username, String password) {
-        // Handle registration logic here, then transition to DashboardPage
-        primaryStage.setScene(new Scene(new DashboardPage(primaryStage, username).getView(), 800, 600));
-        primaryStage.setFullScreen(true);
+        if (registerUser(username, password)) {
+            showAlert("Registration Successful", "You have been registered successfully.");
+            showLoginForm();
+        } else {
+            showAlert("Registration Failed", "Username already exists or error occurred.");
+        }
+    }
+
+    private boolean validateLogin(String username, String password) {
+        String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
+        String dbUsername = "root"; // Update with your database username
+        String dbPassword = "root"; // Update with your database password
+
+        String query = "SELECT * FROM users WHERE username = ? AND password = ?";
+
+        try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
+                PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setString(1, username);
+            statement.setString(2, password);
+            ResultSet resultSet = statement.executeQuery();
+            return resultSet.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private boolean registerUser(String username, String password) {
+        String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
+        String dbUsername = "root"; // Update with your database username
+        String dbPassword = "root"; // Update with your database password
+
+        String query = "INSERT INTO users (username, password) VALUES (?, ?)";
+
+        try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
+                PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setString(1, username);
+            statement.setString(2, password);
+            statement.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private void showAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }
