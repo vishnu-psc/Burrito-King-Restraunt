@@ -9,7 +9,7 @@ public class App extends Application {
         primaryStage.setTitle("Burrito King Restaurant");
         LoginPage loginPage = new LoginPage(primaryStage);
         Scene scene = new Scene(loginPage.getView(), 800, 600);
-        scene.getStylesheets().add("styles.css");
+        scene.getStylesheets().add("style.css");
         primaryStage.setScene(scene);
         primaryStage.setFullScreen(true);
         primaryStage.show();
