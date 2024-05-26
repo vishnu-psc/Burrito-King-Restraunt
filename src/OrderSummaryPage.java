@@ -13,12 +13,17 @@ public class OrderSummaryPage {
     private String username;
     private ObservableList<OrderPage.OrderItem> basket;
     private VBox view;
+    private Label totalLabel;
 
     public OrderSummaryPage(Stage primaryStage, String username, ObservableList<OrderPage.OrderItem> basket) {
         this.primaryStage = primaryStage;
         this.username = username;
         this.basket = basket;
         this.view = createView();
+        primaryStage.setTitle("Order Summary");
+        primaryStage.setScene(new Scene(view));
+        primaryStage.setFullScreen(true);
+        updateTotal();
     }
 
     public VBox getView() {
@@ -41,13 +46,29 @@ public class OrderSummaryPage {
         orderSummaryView.setStyle("-fx-pref-width: 400px; -fx-font-size: 14px;");
         vbox.getChildren().add(orderSummaryView);
 
+        totalLabel = new Label("Total: $0.00");
+        totalLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #333333;");
+        vbox.getChildren().add(totalLabel);
+
         Button backButton = new Button("Back");
         backButton.setStyle(
                 "-fx-pref-width: 150px; -fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px;");
-        backButton.setOnAction(
-                e -> primaryStage.setScene(new Scene(new DashboardPage(primaryStage, username).getView(), 800, 600)));
+        backButton.setOnAction(e -> {
+            DashboardPage dashboardPage = new DashboardPage(primaryStage, username);
+            primaryStage.setTitle("Dashboard");
+            primaryStage.setScene(new Scene(dashboardPage.getView()));
+            primaryStage.setFullScreen(true);
+        });
         vbox.getChildren().add(backButton);
 
         return vbox;
+    }
+
+    private void updateTotal() {
+        double total = 0;
+        for (OrderPage.OrderItem item : basket) {
+            total += item.getTotalPrice();
+        }
+        totalLabel.setText(String.format("Total: $%.2f", total));
     }
 }

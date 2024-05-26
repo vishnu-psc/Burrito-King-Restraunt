@@ -69,7 +69,7 @@ public class EditProfilePage {
         backButton.setStyle("-fx-pref-width: 100px; -fx-background-color: #f44336; -fx-text-fill: white;");
         backButton.setOnAction(e -> {
             primaryStage.setScene(new Scene(new DashboardPage(primaryStage, username).getView()));
-            primaryStage.setMaximized(true);
+            primaryStage.setFullScreen(true); // Ensure full screen mode is set here
             primaryStage.setTitle("Dashboard");
         });
         grid.add(backButton, 1, 4);
@@ -103,7 +103,7 @@ public class EditProfilePage {
         }
 
         primaryStage.setScene(new Scene(new DashboardPage(primaryStage, username).getView()));
-        primaryStage.setMaximized(true);
+        primaryStage.setFullScreen(true); // Ensure full screen mode is set here
         primaryStage.setTitle("Dashboard");
     }
 

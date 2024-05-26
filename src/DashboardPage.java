@@ -48,15 +48,24 @@ public class DashboardPage {
                 leftBox.getChildren().add(welcomeLabel);
                 HBox.setHgrow(leftBox, javafx.scene.layout.Priority.ALWAYS);
 
-                // Create a right-aligned box for the logout button
+                // Create a right-aligned box for the buttons
                 HBox rightBox = new HBox();
                 rightBox.setAlignment(Pos.CENTER_RIGHT);
 
+                // Upgrade button with crown emoji
+                Button upgradeButton = new Button("👑 Upgrade");
+                upgradeButton.setStyle("-fx-background-color: #FFD700; -fx-text-fill: black; -fx-font-size: 14px;");
+                upgradeButton.setOnAction(
+                                e -> primaryStage.setScene(new Scene(new UpgradePage(primaryStage, username).getView(),
+                                                primaryStage.getWidth(), primaryStage.getHeight())));
+
+                // Log Out button
                 Button logOutButton = new Button("Log Out");
                 logOutButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px;");
                 logOutButton.setOnAction(e -> primaryStage.setScene(new Scene(new LoginPage(primaryStage).getView())));
 
-                rightBox.getChildren().add(logOutButton);
+                rightBox.getChildren().addAll(upgradeButton, logOutButton);
+                HBox.setMargin(upgradeButton, new Insets(0, 10, 0, 0));
                 HBox.setMargin(logOutButton, new Insets(0, 0, 0, 10));
 
                 topBox.getChildren().addAll(leftBox, rightBox);
@@ -99,9 +108,12 @@ public class DashboardPage {
                 Button exportOrdersButton = new Button("Export Orders");
                 exportOrdersButton.setStyle(
                                 "-fx-pref-width: 200px; -fx-background-color: #2b7087; -fx-text-fill: white; -fx-font-size: 14px;");
-                exportOrdersButton.setOnAction(
-                                e -> primaryStage
-                                                .setScene(new Scene(new ExportPage(primaryStage, username).getView())));
+                exportOrdersButton.setOnAction(e -> {
+                        ExportPage exportPage = new ExportPage(primaryStage, username);
+                        Scene exportScene = new Scene(exportPage.getView());
+                        primaryStage.setScene(exportScene);
+                        primaryStage.setFullScreen(true); // Ensure full screen mode is set here
+                });
                 grid.add(exportOrdersButton, 0, 3);
 
                 borderPane.setCenter(grid);
