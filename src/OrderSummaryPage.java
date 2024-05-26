@@ -1,4 +1,3 @@
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -11,19 +10,21 @@ import javafx.stage.Stage;
 public class OrderSummaryPage {
     private Stage primaryStage;
     private String username;
-    private ObservableList<OrderPage.OrderItem> basket;
     private VBox view;
     private Label totalLabel;
 
-    public OrderSummaryPage(Stage primaryStage, String username, ObservableList<OrderPage.OrderItem> basket) {
+    public OrderSummaryPage(Stage primaryStage, String username) {
         this.primaryStage = primaryStage;
         this.username = username;
-        this.basket = basket;
         this.view = createView();
         primaryStage.setTitle("Order Summary");
         primaryStage.setScene(new Scene(view));
         primaryStage.setFullScreen(true);
         updateTotal();
+
+        // Add a listener to the orders list to update the total when the list changes
+        OrderData.orders
+                .addListener((javafx.collections.ListChangeListener<OrderPage.OrderItem>) change -> updateTotal());
     }
 
     public VBox getView() {
@@ -66,7 +67,7 @@ public class OrderSummaryPage {
 
     private void updateTotal() {
         double total = 0;
-        for (OrderPage.OrderItem item : basket) {
+        for (OrderPage.OrderItem item : OrderData.orders) {
             total += item.getTotalPrice();
         }
         totalLabel.setText(String.format("Total: $%.2f", total));

@@ -49,8 +49,11 @@ public class UpgradePage {
 
         Button backButton = new Button("Back");
         backButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px;");
-        backButton.setOnAction(
-                e -> primaryStage.setScene(new Scene(new DashboardPage(primaryStage, username).getView())));
+        backButton.setOnAction(e -> {
+            DashboardPage dashboardPage = new DashboardPage(primaryStage, username);
+            primaryStage.setScene(new Scene(dashboardPage.getView()));
+            primaryStage.setFullScreen(true);
+        });
 
         HBox buttonBox = new HBox(10, okButton, backButton);
         buttonBox.setAlignment(Pos.CENTER);
@@ -90,7 +93,9 @@ public class UpgradePage {
         boolean success = updateVipStatus(username, email);
         if (success) {
             // After updating the database, navigate back to the dashboard
-            primaryStage.setScene(new Scene(new DashboardPage(primaryStage, username).getView()));
+            DashboardPage dashboardPage = new DashboardPage(primaryStage, username);
+            primaryStage.setScene(new Scene(dashboardPage.getView()));
+            primaryStage.setFullScreen(true);
         } else {
             showAlert("Error", "Failed to update VIP status. Please try again.");
         }

@@ -1,5 +1,4 @@
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -10,16 +9,21 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 public class DashboardPage {
         private Stage primaryStage;
         private String username;
         private BorderPane view;
-        private ObservableList<OrderPage.OrderItem> basket;
 
         public DashboardPage(Stage primaryStage, String username) {
                 this.primaryStage = primaryStage;
                 this.username = username;
-                this.basket = FXCollections.observableArrayList(); // Initialize the basket here
+                FXCollections.observableArrayList();
                 this.view = createView();
         }
 
@@ -52,20 +56,37 @@ public class DashboardPage {
                 HBox rightBox = new HBox();
                 rightBox.setAlignment(Pos.CENTER_RIGHT);
 
-                // Upgrade button with crown emoji
-                Button upgradeButton = new Button("👑 Upgrade");
-                upgradeButton.setStyle("-fx-background-color: #FFD700; -fx-text-fill: black; -fx-font-size: 14px;");
-                upgradeButton.setOnAction(
-                                e -> primaryStage.setScene(new Scene(new UpgradePage(primaryStage, username).getView(),
-                                                primaryStage.getWidth(), primaryStage.getHeight())));
+                // Check if user is VIP
+                boolean isVip = checkVipStatus(username);
+
+                // Conditionally add the Upgrade button if the user is not VIP
+                if (!isVip) {
+                        // Upgrade button with crown emoji
+                        Button upgradeButton = new Button("👑 Upgrade");
+                        upgradeButton.setStyle(
+                                        "-fx-background-color: #FFD700; -fx-text-fill: black; -fx-font-size: 14px;");
+                        upgradeButton.setOnAction(
+                                        e -> {
+                                                UpgradePage upgradePage = new UpgradePage(primaryStage, username);
+                                                primaryStage.setScene(new Scene(upgradePage.getView(),
+                                                                primaryStage.getWidth(), primaryStage.getHeight()));
+                                                primaryStage.setFullScreen(true);
+                                        });
+
+                        rightBox.getChildren().add(upgradeButton);
+                        HBox.setMargin(upgradeButton, new Insets(0, 10, 0, 0));
+                }
 
                 // Log Out button
                 Button logOutButton = new Button("Log Out");
                 logOutButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px;");
-                logOutButton.setOnAction(e -> primaryStage.setScene(new Scene(new LoginPage(primaryStage).getView())));
+                logOutButton.setOnAction(e -> {
+                        LoginPage loginPage = new LoginPage(primaryStage);
+                        primaryStage.setScene(new Scene(loginPage.getView()));
+                        primaryStage.setFullScreen(true); // Ensure full screen mode is set here
+                });
 
-                rightBox.getChildren().addAll(upgradeButton, logOutButton);
-                HBox.setMargin(upgradeButton, new Insets(0, 10, 0, 0));
+                rightBox.getChildren().add(logOutButton);
                 HBox.setMargin(logOutButton, new Insets(0, 0, 0, 10));
 
                 topBox.getChildren().addAll(leftBox, rightBox);
@@ -99,10 +120,10 @@ public class DashboardPage {
                                 "-fx-pref-width: 200px; -fx-background-color: #2b7087; -fx-text-fill: white; -fx-font-size: 14px;");
                 viewOrdersButton.setOnAction(
                                 e -> primaryStage.setScene(new Scene(
-                                                new OrderSummaryPage(primaryStage, username, basket).getView()))); // Pass
-                                                                                                                   // the
-                                                                                                                   // basket
-                                                                                                                   // here
+                                                new OrderSummaryPage(primaryStage, username).getView()))); // Pass
+                // the
+                // basket
+                // here
                 grid.add(viewOrdersButton, 0, 2);
 
                 Button exportOrdersButton = new Button("Export Orders");
@@ -119,5 +140,27 @@ public class DashboardPage {
                 borderPane.setCenter(grid);
 
                 return borderPane;
+        }
+
+        private boolean checkVipStatus(String username) {
+                String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
+                String dbUsername = "root"; // Update with your database username
+                String dbPassword = "root"; // Update with your database password
+                String query = "SELECT isVip FROM users WHERE username = ?";
+                try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
+                                PreparedStatement pstmt = connection.prepareStatement(query)) {
+
+                        pstmt.setString(1, username);
+                        ResultSet rs = pstmt.executeQuery();
+
+                        if (rs.next()) {
+                                return rs.getBoolean("isVip");
+                        }
+
+                } catch (SQLException e) {
+                        e.printStackTrace();
+                }
+
+                return false;
         }
 }

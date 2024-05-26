@@ -4,7 +4,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
@@ -17,7 +16,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.Optional;
 
 public class EditProfilePage {
     private Stage primaryStage;
@@ -150,9 +148,4 @@ public class EditProfilePage {
         alert.setHeaderText(null);
         alert.showAndWait();
     }
-}
-
-class DatabaseHelper {
-    // This method should contain the actual logic to update the user's profile in
-    // the database
 }

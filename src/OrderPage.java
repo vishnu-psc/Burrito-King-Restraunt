@@ -6,6 +6,12 @@ import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 public class OrderPage {
     private Stage primaryStage;
     private String username;
@@ -14,11 +20,13 @@ public class OrderPage {
     private ComboBox<String> comboBox;
     private TextField quantityField;
     private Label totalLabel;
+    private boolean isVip;
 
     public OrderPage(Stage primaryStage, String username) {
         this.primaryStage = primaryStage;
         this.username = username;
         this.basket = FXCollections.observableArrayList();
+        this.isVip = checkVipStatus(username);
         this.view = createView();
         // Set the title and full screen mode
         primaryStage.setTitle("Order");
@@ -41,7 +49,8 @@ public class OrderPage {
         itemLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #333333;");
         grid.add(itemLabel, 0, 0);
 
-        ObservableList<String> options = FXCollections.observableArrayList("Burrito", "Fries", "Soda");
+        ObservableList<String> options = FXCollections.observableArrayList(
+                "Burrito", "Fries", "Soda", "Meal (1 Burrito, 1 French Fries, 1 Soda)");
         comboBox = new ComboBox<>(options);
         comboBox.setStyle("-fx-pref-width: 150px; -fx-font-size: 14px;");
         grid.add(comboBox, 1, 0);
@@ -68,7 +77,7 @@ public class OrderPage {
         // Display basket
         ListView<OrderItem> basketView = new ListView<>(basket);
         basketView.setPrefHeight(200);
-        basketView.setStyle("-fx-pref-width: 300px; -fx-font-size: 14px;");
+        basketView.setStyle("-fx-pref-width: 500px; -fx-font-size: 14px;");
         grid.add(new Label("Basket:"), 0, 4);
         grid.add(basketView, 1, 4);
 
@@ -100,7 +109,7 @@ public class OrderPage {
             try {
                 int quantity = Integer.parseInt(quantityText);
                 double price = getItemPrice(item);
-                basket.add(new OrderItem(item, quantity, price));
+                basket.add(new OrderItem(item, quantity, price, isVip));
                 updateTotal();
             } catch (NumberFormatException e) {
                 showAlert("Invalid Quantity", "Please enter a valid number for quantity.");
@@ -139,9 +148,33 @@ public class OrderPage {
                 return 5.00;
             case "Soda":
                 return 3.00;
+            case "Meal (1 Burrito, 1 French Fries, 1 Soda)":
+                return isVip ? 18.00 : 21.00;
             default:
                 return 0;
         }
+    }
+
+    private boolean checkVipStatus(String username) {
+        String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
+        String dbUsername = "root"; // Update with your database username
+        String dbPassword = "root"; // Update with your database password
+        String query = "SELECT isVip FROM users WHERE username = ?";
+        try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
+                PreparedStatement pstmt = connection.prepareStatement(query)) {
+
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getBoolean("isVip");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
     }
 
     private void showAlert(String title, String message) {
@@ -156,11 +189,13 @@ public class OrderPage {
         private String item;
         private int quantity;
         private double price;
+        private boolean isVip;
 
-        public OrderItem(String item, int quantity, double price) {
+        public OrderItem(String item, int quantity, double price, boolean isVip) {
             this.item = item;
             this.quantity = quantity;
             this.price = price;
+            this.isVip = isVip;
         }
 
         public String getItem() {
@@ -181,7 +216,11 @@ public class OrderPage {
 
         @Override
         public String toString() {
-            return String.format("%s - Quantity: %d - Price: $%.2f", item, quantity, getTotalPrice());
+            String itemString = String.format("%s - Quantity: %d - Price: $%.2f", item, quantity, getTotalPrice());
+            if (isVip && item.equals("Meal (1 Burrito, 1 French Fries, 1 Soda)")) {
+                itemString += " (VIP Discount Applied)";
+            }
+            return itemString;
         }
     }
 }
