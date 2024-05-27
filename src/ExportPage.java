@@ -154,10 +154,6 @@ public class ExportPage {
                 newCreditsBalance -= creditsToUse;
             }
 
-            // Process the payment
-            // ...
-
-            // Show confirmation message
             showAlert("Payment Successful",
                     "Your payment has been processed successfully. Total amount paid: $"
                             + String.format("%.2f", totalAmount));
@@ -165,12 +161,10 @@ public class ExportPage {
             // Clear orders and add credits
             OrderData.orders.clear();
             int creditsEarned = (int) totalAmount;
-            addCredits(creditsEarned); // Set credits to the amount of money spent
+            addCredits(creditsEarned);
 
-            // Update credits balance in the database
             updateCredits(newCreditsBalance + creditsEarned);
 
-            // Navigate back to the DashboardPage
             DashboardPage dashboardPage = new DashboardPage(primaryStage, username);
             primaryStage.setTitle("Dashboard");
             primaryStage.setScene(new Scene(dashboardPage.getView()));
@@ -184,6 +178,7 @@ public class ExportPage {
         return cardNumber.matches("\\d{16}") && cvv.matches("\\d{3}") && expiryDate.matches("(0[1-9]|1[0-2])/\\d{4}");
     }
 
+    // Updates points(also vip credits) in database
     private void updateCredits(int newCredits) {
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
         String dbUsername = "root";

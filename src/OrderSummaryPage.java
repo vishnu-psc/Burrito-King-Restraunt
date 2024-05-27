@@ -65,6 +65,7 @@ public class OrderSummaryPage {
         return vbox;
     }
 
+    // Updating total here
     private void updateTotal() {
         double total = 0;
         for (OrderPage.OrderItem item : OrderData.orders) {

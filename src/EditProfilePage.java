@@ -67,12 +67,11 @@ public class EditProfilePage {
         backButton.setStyle("-fx-pref-width: 100px; -fx-background-color: #f44336; -fx-text-fill: white;");
         backButton.setOnAction(e -> {
             primaryStage.setScene(new Scene(new DashboardPage(primaryStage, username).getView()));
-            primaryStage.setFullScreen(true); // Ensure full screen mode is set here
+            primaryStage.setFullScreen(true);
             primaryStage.setTitle("Dashboard");
         });
         grid.add(backButton, 1, 4);
 
-        // Make sure the grid stretches to fill the window
         VBox root = new VBox(grid);
         VBox.setVgrow(grid, Priority.ALWAYS);
 
@@ -84,6 +83,7 @@ public class EditProfilePage {
         return grid;
     }
 
+    // It updates first and lastname also password in database
     private void handleSave(String firstName, String lastName, String password) {
         // Validate input if necessary
         if (firstName.isEmpty() || lastName.isEmpty() || password.isEmpty()) {
@@ -91,7 +91,6 @@ public class EditProfilePage {
             return;
         }
 
-        // Update user profile in the database
         boolean updateSuccess = updateUserProfile(username, firstName, lastName, password);
 
         if (updateSuccess) {
@@ -107,13 +106,12 @@ public class EditProfilePage {
 
     private boolean updateUserProfile(String username, String firstName, String lastName, String password) {
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
-        String dbUsername = "root"; // Update with your database username
-        String dbPassword = "root"; // Update with your database password
+        String dbUsername = "root";
+        String dbPassword = "root";
         String query = "UPDATE users SET firstname = ?, lastname = ?, password = ? WHERE username = ?";
         try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
                 PreparedStatement pstmt = connection.prepareStatement(query)) {
 
-            // Enable transaction management
             connection.setAutoCommit(false);
 
             pstmt.setString(1, firstName);
@@ -123,7 +121,6 @@ public class EditProfilePage {
 
             int affectedRows = pstmt.executeUpdate();
 
-            // Commit the transaction
             connection.commit();
 
             if (affectedRows > 0) {

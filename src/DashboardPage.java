@@ -35,13 +35,11 @@ public class DashboardPage {
                 BorderPane borderPane = new BorderPane();
                 borderPane.setStyle("-fx-background-color: #f5f5f5;");
 
-                // Top section with Welcome label and Log Out button
                 HBox topBox = new HBox();
                 topBox.setAlignment(Pos.CENTER);
                 topBox.setPadding(new Insets(10, 20, 10, 20));
                 topBox.setStyle("-fx-background-color: #333333;");
 
-                // Create a left-aligned box for the welcome label
                 HBox leftBox = new HBox();
                 leftBox.setAlignment(Pos.CENTER_LEFT);
 
@@ -52,7 +50,6 @@ public class DashboardPage {
                 leftBox.getChildren().add(welcomeLabel);
                 HBox.setHgrow(leftBox, javafx.scene.layout.Priority.ALWAYS);
 
-                // Create a right-aligned box for the buttons
                 HBox rightBox = new HBox();
                 rightBox.setAlignment(Pos.CENTER_RIGHT);
 
@@ -77,13 +74,13 @@ public class DashboardPage {
                         HBox.setMargin(upgradeButton, new Insets(0, 10, 0, 0));
                 }
 
-                // Log Out button
+                // Log Out button and function which trigger by clicking it
                 Button logOutButton = new Button("Log Out");
                 logOutButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px;");
                 logOutButton.setOnAction(e -> {
                         LoginPage loginPage = new LoginPage(primaryStage);
                         primaryStage.setScene(new Scene(loginPage.getView()));
-                        primaryStage.setFullScreen(true); // Ensure full screen mode is set here
+                        primaryStage.setFullScreen(true);
                 });
 
                 rightBox.getChildren().add(logOutButton);
@@ -93,21 +90,21 @@ public class DashboardPage {
 
                 borderPane.setTop(topBox);
 
-                // Main content area with buttons
                 GridPane grid = new GridPane();
                 grid.setAlignment(Pos.CENTER);
                 grid.setHgap(10);
                 grid.setVgap(10);
                 grid.setPadding(new Insets(20, 20, 20, 20));
 
+                // Click on editprofile button takes you to editprofile page
                 Button editProfileButton = new Button("Edit Profile");
                 editProfileButton.setStyle(
                                 "-fx-pref-width: 200px; -fx-background-color: #2b7087; -fx-text-fill: white; -fx-font-size: 14px;");
-                editProfileButton.setOnAction(
-                                e -> primaryStage.setScene(
-                                                new Scene(new EditProfilePage(primaryStage, username).getView())));
+                editProfileButton.setOnAction(e -> primaryStage
+                                .setScene(new Scene(new EditProfilePage(primaryStage, username).getView())));
                 grid.add(editProfileButton, 0, 0);
 
+                // Takes you to order page
                 Button orderButton = new Button("Place Order");
                 orderButton.setStyle(
                                 "-fx-pref-width: 200px; -fx-background-color: #2b7087; -fx-text-fill: white; -fx-font-size: 14px;");
@@ -115,15 +112,12 @@ public class DashboardPage {
                                 e -> primaryStage.setScene(new Scene(new OrderPage(primaryStage, username).getView())));
                 grid.add(orderButton, 0, 1);
 
+                // Takes you to view order page
                 Button viewOrdersButton = new Button("View Orders");
                 viewOrdersButton.setStyle(
                                 "-fx-pref-width: 200px; -fx-background-color: #2b7087; -fx-text-fill: white; -fx-font-size: 14px;");
-                viewOrdersButton.setOnAction(
-                                e -> primaryStage.setScene(new Scene(
-                                                new OrderSummaryPage(primaryStage, username).getView()))); // Pass
-                // the
-                // basket
-                // here
+                viewOrdersButton.setOnAction(e -> primaryStage
+                                .setScene(new Scene(new OrderSummaryPage(primaryStage, username).getView())));
                 grid.add(viewOrdersButton, 0, 2);
 
                 Button exportOrdersButton = new Button("Export Orders");
@@ -133,7 +127,7 @@ public class DashboardPage {
                         ExportPage exportPage = new ExportPage(primaryStage, username);
                         Scene exportScene = new Scene(exportPage.getView());
                         primaryStage.setScene(exportScene);
-                        primaryStage.setFullScreen(true); // Ensure full screen mode is set here
+                        primaryStage.setFullScreen(true);
                 });
                 grid.add(exportOrdersButton, 0, 3);
 
@@ -142,10 +136,11 @@ public class DashboardPage {
                 return borderPane;
         }
 
+        // Check whether user is VIP or not
         private boolean checkVipStatus(String username) {
                 String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
-                String dbUsername = "root"; // Update with your database username
-                String dbPassword = "root"; // Update with your database password
+                String dbUsername = "root";
+                String dbPassword = "root";
                 String query = "SELECT isVip FROM users WHERE username = ?";
                 try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
                                 PreparedStatement pstmt = connection.prepareStatement(query)) {

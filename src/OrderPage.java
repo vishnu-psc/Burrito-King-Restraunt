@@ -28,7 +28,7 @@ public class OrderPage {
         this.basket = FXCollections.observableArrayList();
         this.isVip = checkVipStatus(username);
         this.view = createView();
-        // Set the title and full screen mode
+
         primaryStage.setTitle("Order");
         primaryStage.setScene(new Scene(view));
         primaryStage.setFullScreen(true);
@@ -74,7 +74,7 @@ public class OrderPage {
         totalLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #333333;");
         grid.add(totalLabel, 1, 3);
 
-        // Display basket
+        // Displaying basket
         ListView<OrderItem> basketView = new ListView<>(basket);
         basketView.setPrefHeight(200);
         basketView.setStyle("-fx-pref-width: 500px; -fx-font-size: 14px;");
@@ -140,6 +140,8 @@ public class OrderPage {
         totalLabel.setText(String.format("Total: $%.2f", total));
     }
 
+    // Price of everything and also in case of vip user meal amount reduced to 18
+    // AUD
     private double getItemPrice(String item) {
         switch (item) {
             case "Burrito":
@@ -155,10 +157,11 @@ public class OrderPage {
         }
     }
 
+    // Checking user is vip or not after fetching from database
     private boolean checkVipStatus(String username) {
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
-        String dbUsername = "root"; // Update with your database username
-        String dbPassword = "root"; // Update with your database password
+        String dbUsername = "root";
+        String dbPassword = "root";
         String query = "SELECT isVip FROM users WHERE username = ?";
         try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
                 PreparedStatement pstmt = connection.prepareStatement(query)) {

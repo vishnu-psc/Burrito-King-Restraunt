@@ -36,7 +36,6 @@ public class LoginPage {
     private BorderPane createView() {
         BorderPane borderPane = new BorderPane();
 
-        // Title
         Label titleLabel = new Label("Welcome to Burrito King");
         titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 24));
         HBox titleBox = new HBox(titleLabel);
@@ -44,7 +43,6 @@ public class LoginPage {
         titleBox.setPadding(new Insets(20, 0, 20, 0));
         borderPane.setTop(titleBox);
 
-        // Buttons for Login and Register
         HBox buttonBox = new HBox(20);
         buttonBox.setAlignment(Pos.CENTER);
         buttonBox.setPadding(new Insets(20, 0, 20, 0));
@@ -62,7 +60,6 @@ public class LoginPage {
         buttonBox.getChildren().addAll(loginButton, registerButton);
         borderPane.setCenter(buttonBox);
 
-        // Form Grid
         formGrid = new GridPane();
         formGrid.setAlignment(Pos.CENTER);
         formGrid.setHgap(10);
@@ -137,10 +134,11 @@ public class LoginPage {
         }
     }
 
+    // Handle login is valid or authenticated
     private boolean validateLogin(String username, String password) {
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
-        String dbUsername = "root"; // Update with your database username
-        String dbPassword = "root"; // Update with your database password
+        String dbUsername = "root";
+        String dbPassword = "root";
 
         String query = "SELECT * FROM users WHERE username = ? AND password = ?";
 
@@ -156,10 +154,11 @@ public class LoginPage {
         }
     }
 
+    // Register new int database
     private boolean registerUser(String username, String password) {
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
-        String dbUsername = "root"; // Update with your database username
-        String dbPassword = "root"; // Update with your database password
+        String dbUsername = "root";
+        String dbPassword = "root";
 
         String query = "INSERT INTO users (username, password) VALUES (?, ?)";
 
