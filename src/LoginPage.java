@@ -36,6 +36,7 @@ public class LoginPage {
     private BorderPane createView() {
         BorderPane borderPane = new BorderPane();
 
+        // Title
         Label titleLabel = new Label("Welcome to Burrito King");
         titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 24));
         HBox titleBox = new HBox(titleLabel);
@@ -43,6 +44,7 @@ public class LoginPage {
         titleBox.setPadding(new Insets(20, 0, 20, 0));
         borderPane.setTop(titleBox);
 
+        // Buttons for Login and Register
         HBox buttonBox = new HBox(20);
         buttonBox.setAlignment(Pos.CENTER);
         buttonBox.setPadding(new Insets(20, 0, 20, 0));
@@ -60,6 +62,7 @@ public class LoginPage {
         buttonBox.getChildren().addAll(loginButton, registerButton);
         borderPane.setCenter(buttonBox);
 
+        // Form Grid
         formGrid = new GridPane();
         formGrid.setAlignment(Pos.CENTER);
         formGrid.setHgap(10);
@@ -96,24 +99,37 @@ public class LoginPage {
     private void showRegisterForm() {
         formGrid.getChildren().clear();
 
+        Label firstNameLabel = new Label("First Name:");
+        formGrid.add(firstNameLabel, 0, 0);
+
+        TextField firstNameField = new TextField();
+        formGrid.add(firstNameField, 1, 0);
+
+        Label lastNameLabel = new Label("Last Name:");
+        formGrid.add(lastNameLabel, 0, 1);
+
+        TextField lastNameField = new TextField();
+        formGrid.add(lastNameField, 1, 1);
+
         Label usernameLabel = new Label("Enter a unique Username:");
-        formGrid.add(usernameLabel, 0, 0);
+        formGrid.add(usernameLabel, 0, 2);
 
         TextField usernameField = new TextField();
-        formGrid.add(usernameField, 1, 0);
+        formGrid.add(usernameField, 1, 2);
 
         Label passwordLabel = new Label("Password:");
-        formGrid.add(passwordLabel, 0, 1);
+        formGrid.add(passwordLabel, 0, 3);
 
         PasswordField passwordField = new PasswordField();
-        formGrid.add(passwordField, 1, 1);
+        formGrid.add(passwordField, 1, 3);
 
         Button submitButton = new Button("Submit and Register Me");
         submitButton.setPrefWidth(150);
         submitButton.setStyle("-fx-background-color: #2b7087; -fx-text-fill: white; -fx-font-size: 11px;");
         submitButton.setOnAction(
-                e -> handleRegister(usernameField.getText(), passwordField.getText()));
-        formGrid.add(submitButton, 1, 3);
+                e -> handleRegister(firstNameField.getText(), lastNameField.getText(), usernameField.getText(),
+                        passwordField.getText()));
+        formGrid.add(submitButton, 1, 4);
     }
 
     private void handleLogin(String username, String password) {
@@ -125,8 +141,8 @@ public class LoginPage {
         }
     }
 
-    private void handleRegister(String username, String password) {
-        if (registerUser(username, password)) {
+    private void handleRegister(String firstName, String lastName, String username, String password) {
+        if (registerUser(firstName, lastName, username, password)) {
             showAlert("Registration Successful", "You have been registered successfully.");
             showLoginForm();
         } else {
@@ -134,11 +150,10 @@ public class LoginPage {
         }
     }
 
-    // Handle login is valid or authenticated
     private boolean validateLogin(String username, String password) {
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
-        String dbUsername = "root";
-        String dbPassword = "root";
+        String dbUsername = "root"; // Update with your database username
+        String dbPassword = "root"; // Update with your database password
 
         String query = "SELECT * FROM users WHERE username = ? AND password = ?";
 
@@ -154,18 +169,19 @@ public class LoginPage {
         }
     }
 
-    // Register new int database
-    private boolean registerUser(String username, String password) {
+    private boolean registerUser(String firstName, String lastName, String username, String password) {
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
-        String dbUsername = "root";
-        String dbPassword = "root";
+        String dbUsername = "root"; // Update with your database username
+        String dbPassword = "root"; // Update with your database password
 
-        String query = "INSERT INTO users (username, password) VALUES (?, ?)";
+        String query = "INSERT INTO users (firstname, lastname, username, password) VALUES (?, ?, ?, ?)";
 
         try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
                 PreparedStatement statement = connection.prepareStatement(query)) {
-            statement.setString(1, username);
-            statement.setString(2, password);
+            statement.setString(1, firstName);
+            statement.setString(2, lastName);
+            statement.setString(3, username);
+            statement.setString(4, password);
             statement.executeUpdate();
             return true;
         } catch (SQLException e) {

@@ -18,17 +18,43 @@ import java.sql.SQLException;
 public class DashboardPage {
         private Stage primaryStage;
         private String username;
+        private String firstName;
+        private String lastName;
+        private boolean isVip;
         private BorderPane view;
 
         public DashboardPage(Stage primaryStage, String username) {
                 this.primaryStage = primaryStage;
                 this.username = username;
                 FXCollections.observableArrayList();
+                fetchUserDetails(username);
                 this.view = createView();
         }
 
         public BorderPane getView() {
                 return view;
+        }
+
+        private void fetchUserDetails(String username) {
+                String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
+                String dbUsername = "root";
+                String dbPassword = "root";
+                String query = "SELECT firstName, lastName, isVip FROM users WHERE username = ?";
+                try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
+                                PreparedStatement pstmt = connection.prepareStatement(query)) {
+
+                        pstmt.setString(1, username);
+                        ResultSet rs = pstmt.executeQuery();
+
+                        if (rs.next()) {
+                                this.firstName = rs.getString("firstName");
+                                this.lastName = rs.getString("lastName");
+                                this.isVip = rs.getBoolean("isVip");
+                        }
+
+                } catch (SQLException e) {
+                        e.printStackTrace();
+                }
         }
 
         private BorderPane createView() {
@@ -43,7 +69,7 @@ public class DashboardPage {
                 HBox leftBox = new HBox();
                 leftBox.setAlignment(Pos.CENTER_LEFT);
 
-                Label welcomeLabel = new Label("Welcome, " + username);
+                Label welcomeLabel = new Label("Welcome, " + firstName + " " + lastName + (isVip ? " 👑" : ""));
                 welcomeLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: white;");
                 welcomeLabel.setAlignment(Pos.CENTER_LEFT);
 
@@ -53,22 +79,18 @@ public class DashboardPage {
                 HBox rightBox = new HBox();
                 rightBox.setAlignment(Pos.CENTER_RIGHT);
 
-                // Check if user is VIP
-                boolean isVip = checkVipStatus(username);
-
                 // Conditionally add the Upgrade button if the user is not VIP
                 if (!isVip) {
                         // Upgrade button with crown emoji
                         Button upgradeButton = new Button("👑 Upgrade");
                         upgradeButton.setStyle(
                                         "-fx-background-color: #FFD700; -fx-text-fill: black; -fx-font-size: 14px;");
-                        upgradeButton.setOnAction(
-                                        e -> {
-                                                UpgradePage upgradePage = new UpgradePage(primaryStage, username);
-                                                primaryStage.setScene(new Scene(upgradePage.getView(),
-                                                                primaryStage.getWidth(), primaryStage.getHeight()));
-                                                primaryStage.setFullScreen(true);
-                                        });
+                        upgradeButton.setOnAction(e -> {
+                                UpgradePage upgradePage = new UpgradePage(primaryStage, username);
+                                primaryStage.setScene(new Scene(upgradePage.getView(), primaryStage.getWidth(),
+                                                primaryStage.getHeight()));
+                                primaryStage.setFullScreen(true);
+                        });
 
                         rightBox.getChildren().add(upgradeButton);
                         HBox.setMargin(upgradeButton, new Insets(0, 10, 0, 0));
@@ -96,7 +118,7 @@ public class DashboardPage {
                 grid.setVgap(10);
                 grid.setPadding(new Insets(20, 20, 20, 20));
 
-                // Click on editprofile button takes you to editprofile page
+                // Click on edit profile button takes you to edit profile page
                 Button editProfileButton = new Button("Edit Profile");
                 editProfileButton.setStyle(
                                 "-fx-pref-width: 200px; -fx-background-color: #2b7087; -fx-text-fill: white; -fx-font-size: 14px;");
@@ -134,28 +156,5 @@ public class DashboardPage {
                 borderPane.setCenter(grid);
 
                 return borderPane;
-        }
-
-        // Check whether user is VIP or not
-        private boolean checkVipStatus(String username) {
-                String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
-                String dbUsername = "root";
-                String dbPassword = "root";
-                String query = "SELECT isVip FROM users WHERE username = ?";
-                try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
-                                PreparedStatement pstmt = connection.prepareStatement(query)) {
-
-                        pstmt.setString(1, username);
-                        ResultSet rs = pstmt.executeQuery();
-
-                        if (rs.next()) {
-                                return rs.getBoolean("isVip");
-                        }
-
-                } catch (SQLException e) {
-                        e.printStackTrace();
-                }
-
-                return false;
         }
 }

@@ -4,6 +4,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
 import java.sql.Connection;
@@ -16,7 +17,7 @@ public class OrderPage {
     private Stage primaryStage;
     private String username;
     private GridPane view;
-    private ObservableList<OrderItem> basket;
+    private static ObservableList<OrderItem> basket = FXCollections.observableArrayList(); // Static basket
     private ComboBox<String> comboBox;
     private TextField quantityField;
     private Label totalLabel;
@@ -25,7 +26,6 @@ public class OrderPage {
     public OrderPage(Stage primaryStage, String username) {
         this.primaryStage = primaryStage;
         this.username = username;
-        this.basket = FXCollections.observableArrayList();
         this.isVip = checkVipStatus(username);
         this.view = createView();
 
@@ -74,10 +74,46 @@ public class OrderPage {
         totalLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #333333;");
         grid.add(totalLabel, 1, 3);
 
-        // Displaying basket
+        // Displaying basket with + and - buttons
         ListView<OrderItem> basketView = new ListView<>(basket);
+        basketView.setCellFactory(param -> new ListCell<OrderItem>() {
+            @Override
+            protected void updateItem(OrderItem item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    HBox hBox = new HBox(10);
+                    hBox.setAlignment(Pos.CENTER_LEFT);
+                    Button subtractButton = new Button("-");
+                    subtractButton
+                            .setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px;");
+                    subtractButton.setOnAction(e -> {
+                        item.decreaseQuantity();
+                        if (item.getQuantity() <= 0) {
+                            basket.remove(item);
+                        }
+                        updateTotal();
+                        basketView.refresh();
+                    });
+
+                    Label itemLabel = new Label(item.toString());
+                    Button addButton = new Button("+");
+                    addButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px;");
+                    addButton.setOnAction(e -> {
+                        item.increaseQuantity();
+                        updateTotal();
+                        basketView.refresh();
+                    });
+
+                    hBox.getChildren().addAll(subtractButton, itemLabel, addButton);
+                    setGraphic(hBox);
+                }
+            }
+        });
         basketView.setPrefHeight(200);
-        basketView.setStyle("-fx-pref-width: 500px; -fx-font-size: 14px;");
+        basketView.setStyle("-fx-pref-width: 700px; -fx-font-size: 14px;"); // Increased width
         grid.add(new Label("Basket:"), 0, 4);
         grid.add(basketView, 1, 4);
 
@@ -98,6 +134,8 @@ public class OrderPage {
                     primaryStage.setFullScreen(true);
                 });
         grid.add(backButton, 1, 6);
+
+        updateTotal(); // Ensure the total is updated when the view is created
 
         return grid;
     }
@@ -215,6 +253,14 @@ public class OrderPage {
 
         public double getTotalPrice() {
             return price * quantity;
+        }
+
+        public void increaseQuantity() {
+            this.quantity++;
+        }
+
+        public void decreaseQuantity() {
+            this.quantity--;
         }
 
         @Override

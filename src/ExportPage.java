@@ -1,14 +1,15 @@
+import javafx.geometry.HPos;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ExportPage {
     private Stage primaryStage;
@@ -43,6 +44,14 @@ public class ExportPage {
         Label exportLabel = new Label("Export Orders for " + username);
         exportLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
         grid.add(exportLabel, 0, 0, 2, 1);
+
+        // View Order History button
+        Button viewOrderHistoryButton = new Button("View Order History");
+        viewOrderHistoryButton.setStyle(
+                "-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-size: 14px;");
+        viewOrderHistoryButton.setOnAction(e -> generateOrderHistoryCSV());
+        grid.add(viewOrderHistoryButton, 1, 0);
+        GridPane.setHalignment(viewOrderHistoryButton, HPos.RIGHT);
 
         // Total amount label
         totalLabel = new Label("Total Amount: $" + totalAmount);
@@ -154,6 +163,9 @@ public class ExportPage {
                 newCreditsBalance -= creditsToUse;
             }
 
+            // Insert order details into the orders table
+            insertOrderDetails();
+
             showAlert("Payment Successful",
                     "Your payment has been processed successfully. Total amount paid: $"
                             + String.format("%.2f", totalAmount));
@@ -176,6 +188,32 @@ public class ExportPage {
 
     private boolean validateCardDetails(String cardNumber, String cvv, String expiryDate) {
         return cardNumber.matches("\\d{16}") && cvv.matches("\\d{3}") && expiryDate.matches("(0[1-9]|1[0-2])/\\d{4}");
+    }
+
+    private void insertOrderDetails() {
+        String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
+        String dbUsername = "root";
+        String dbPassword = "root";
+        String query = "INSERT INTO orders (orderDetails, status, user, total) VALUES (?, 'Delivered', ?, ?)";
+        try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
+                PreparedStatement pstmt = connection.prepareStatement(query)) {
+
+            String orderDetails = OrderData.orders.stream()
+                    .map(order -> order.getItem() + " x " + order.getQuantity())
+                    .reduce((order1, order2) -> order1 + ", " + order2)
+                    .orElse("");
+
+            pstmt.setString(1, orderDetails);
+            pstmt.setString(2, username);
+            pstmt.setDouble(3, totalAmount);
+
+            pstmt.executeUpdate();
+            System.out.println("DONE!!");
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("NONE!!!");
+        }
     }
 
     // Updates points(also vip credits) in database
@@ -206,5 +244,55 @@ public class ExportPage {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    // Method to generate a CSV file with order history
+    private void generateOrderHistoryCSV() {
+        List<String[]> orderHistory = fetchOrderHistory();
+
+        try (FileWriter csvWriter = new FileWriter("OrderHistory_" + username + ".csv")) {
+            csvWriter.append("Order ID,Order Details,Status,Total\n");
+            for (String[] order : orderHistory) {
+                csvWriter.append(String.join(",", order));
+                csvWriter.append("\n");
+            }
+            csvWriter.flush();
+
+            showAlert("Order History Exported", "Order history has been exported to CSV file successfully.");
+        } catch (IOException e) {
+            e.printStackTrace();
+            showAlert("Error", "An error occurred while exporting order history.");
+        }
+    }
+
+    // Method to fetch order history from the database
+    private List<String[]> fetchOrderHistory() {
+        List<String[]> orderHistory = new ArrayList<>();
+
+        String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
+        String dbUsername = "root";
+        String dbPassword = "root";
+        String query = "SELECT orderID, orderDetails, status, total FROM orders WHERE user = ?";
+        try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
+                PreparedStatement pstmt = connection.prepareStatement(query)) {
+
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                String[] order = {
+                        rs.getString("orderID"),
+                        rs.getString("orderDetails"),
+                        rs.getString("status"),
+                        String.format("%.2f", rs.getDouble("total"))
+                };
+                orderHistory.add(order);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return orderHistory;
     }
 }

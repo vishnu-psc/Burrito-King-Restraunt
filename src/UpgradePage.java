@@ -40,14 +40,16 @@ public class UpgradePage {
         Label titleLabel = new Label("Upgrade to VIP");
         titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 
-        Label messageLabel = new Label("For upgrading your account to VIP you need to provide us with your email.");
+        Label messageLabel = new Label(
+                "To upgrade, the application asks if the user agrees to receive promotions:\r\n" + //
+                        "Would you like to receive promotion information via email? ");
         messageLabel.setStyle("-fx-font-size: 16px;");
 
-        Button okButton = new Button("OK");
+        Button okButton = new Button("YES");
         okButton.setStyle("-fx-background-color: #2b7087; -fx-text-fill: white; -fx-font-size: 14px;");
         okButton.setOnAction(e -> showEmailInput(borderPane));
 
-        Button backButton = new Button("Back");
+        Button backButton = new Button("NO");
         backButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px;");
         backButton.setOnAction(e -> {
             DashboardPage dashboardPage = new DashboardPage(primaryStage, username);
