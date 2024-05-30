@@ -142,6 +142,7 @@ public class DashboardPage {
                                 .setScene(new Scene(new OrderSummaryPage(primaryStage, username).getView())));
                 grid.add(viewOrdersButton, 0, 2);
 
+                // Takes you to export orders page
                 Button exportOrdersButton = new Button("Export Orders");
                 exportOrdersButton.setStyle(
                                 "-fx-pref-width: 200px; -fx-background-color: #2b7087; -fx-text-fill: white; -fx-font-size: 14px;");
@@ -152,6 +153,18 @@ public class DashboardPage {
                         primaryStage.setFullScreen(true);
                 });
                 grid.add(exportOrdersButton, 0, 3);
+
+                // Takes you to awaited orders page
+                Button awaitedOrdersButton = new Button("Awaited Orders");
+                awaitedOrdersButton.setStyle(
+                                "-fx-pref-width: 200px; -fx-background-color: #2b7087; -fx-text-fill: white; -fx-font-size: 14px;");
+                awaitedOrdersButton.setOnAction(e -> {
+                        AwaitedOrdersPage awaitedOrdersPage = new AwaitedOrdersPage(primaryStage, username);
+                        Scene awaitedOrdersScene = new Scene(awaitedOrdersPage.getView());
+                        primaryStage.setScene(awaitedOrdersScene);
+                        primaryStage.setFullScreen(true);
+                });
+                grid.add(awaitedOrdersButton, 0, 4);
 
                 borderPane.setCenter(grid);
 

@@ -147,7 +147,8 @@ public class OrderPage {
             try {
                 int quantity = Integer.parseInt(quantityText);
                 double price = getItemPrice(item);
-                basket.add(new OrderItem(item, quantity, price, isVip));
+                int waitTime = getItemWaitTime(item);
+                basket.add(new OrderItem(item, quantity, price, waitTime, isVip));
                 updateTotal();
             } catch (NumberFormatException e) {
                 showAlert("Invalid Quantity", "Please enter a valid number for quantity.");
@@ -159,12 +160,14 @@ public class OrderPage {
 
     private void handleCheckout() {
         if (!basket.isEmpty()) {
+            int totalWaitTime = basket.stream().mapToInt(OrderItem::getTotalWaitTime).sum();
             OrderData.orders.addAll(basket);
             comboBox.getSelectionModel().clearSelection();
             quantityField.clear();
             basket.clear();
             updateTotal();
-            showAlert("Order Placed", "Your order has been placed successfully.");
+            showAlert("Order Placed", String
+                    .format("Your order has been placed successfully. Preparing time: %d minutes.", totalWaitTime));
         } else {
             showAlert("Empty Basket", "Your basket is empty. Please add items to the basket.");
         }
@@ -190,6 +193,22 @@ public class OrderPage {
                 return 3.00;
             case "Meal (1 Burrito, 1 French Fries, 1 Soda)":
                 return isVip ? 18.00 : 21.00;
+            default:
+                return 0;
+        }
+    }
+
+    // Wait time for each item
+    private int getItemWaitTime(String item) {
+        switch (item) {
+            case "Burrito":
+                return 7;
+            case "Fries":
+                return 4;
+            case "Soda":
+                return 1;
+            case "Meal (1 Burrito, 1 French Fries, 1 Soda)":
+                return 10;
             default:
                 return 0;
         }
@@ -230,12 +249,14 @@ public class OrderPage {
         private String item;
         private int quantity;
         private double price;
+        private int waitTime;
         private boolean isVip;
 
-        public OrderItem(String item, int quantity, double price, boolean isVip) {
+        public OrderItem(String item, int quantity, double price, int waitTime, boolean isVip) {
             this.item = item;
             this.quantity = quantity;
             this.price = price;
+            this.waitTime = waitTime;
             this.isVip = isVip;
         }
 
@@ -249,6 +270,14 @@ public class OrderPage {
 
         public double getPrice() {
             return price;
+        }
+
+        public int getWaitTime() {
+            return waitTime;
+        }
+
+        public int getTotalWaitTime() {
+            return waitTime * quantity;
         }
 
         public double getTotalPrice() {
@@ -265,7 +294,8 @@ public class OrderPage {
 
         @Override
         public String toString() {
-            String itemString = String.format("%s - Quantity: %d - Price: $%.2f", item, quantity, getTotalPrice());
+            String itemString = String.format("%s - Quantity: %d - Price: $%.2f - Wait Time: %d min", item, quantity,
+                    getTotalPrice(), getTotalWaitTime());
             if (isVip && item.equals("Meal (1 Burrito, 1 French Fries, 1 Soda)")) {
                 itemString += " (VIP Discount Applied)";
             }

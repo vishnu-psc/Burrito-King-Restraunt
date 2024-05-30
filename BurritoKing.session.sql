@@ -14,5 +14,7 @@ USE BurritoKingDB;
 --     orderDetails VARCHAR(50),
 --     status VARCHAR(50),
 --     user VARCHAR(50),
---     total int
+--     total int,
+--     dates datetime,
+--     waitTime int
 -- );

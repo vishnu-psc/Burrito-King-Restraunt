@@ -1,10 +1,14 @@
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -19,7 +23,6 @@ public class OrderSummaryPage {
     private Stage primaryStage;
     private String username;
     private VBox view;
-    private Label totalLabel;
 
     public OrderSummaryPage(Stage primaryStage, String username) {
         this.primaryStage = primaryStage;
@@ -28,11 +31,6 @@ public class OrderSummaryPage {
         primaryStage.setTitle("Order Summary");
         primaryStage.setScene(new Scene(view));
         primaryStage.setFullScreen(true);
-        updateTotal();
-
-        // Add a listener to the orders list to update the total when the list changes
-        OrderData.orders
-                .addListener((javafx.collections.ListChangeListener<OrderPage.OrderItem>) change -> updateTotal());
     }
 
     public VBox getView() {
@@ -50,21 +48,38 @@ public class OrderSummaryPage {
         titleLabel.setStyle("-fx-font-size: 20px; -fx-text-fill: #333333;");
         vbox.getChildren().add(titleLabel);
 
-        ListView<OrderPage.OrderItem> orderSummaryView = new ListView<>(OrderData.orders);
-        orderSummaryView.setPrefHeight(200);
-        orderSummaryView.setStyle("-fx-pref-width: 400px; -fx-font-size: 14px;");
-        vbox.getChildren().add(orderSummaryView);
-
-        totalLabel = new Label("Total: $0.00");
-        totalLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #333333;");
-        vbox.getChildren().add(totalLabel);
-
         HBox buttonBox = new HBox(10);
         buttonBox.setAlignment(Pos.CENTER);
 
+        Button collectedButton = new Button("Collected");
+        collectedButton.setStyle(
+                "-fx-pref-width: 150px; -fx-background-color: #4caf50; -fx-text-fill: white; -fx-font-size: 14px;");
+        collectedButton.setOnAction(e -> showOrders("Collected"));
+
+        Button canceledButton = new Button("Canceled");
+        canceledButton.setStyle(
+                "-fx-pref-width: 150px; -fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px;");
+        canceledButton.setOnAction(e -> showOrders("Canceled"));
+
+        buttonBox.getChildren().addAll(collectedButton, canceledButton);
+        vbox.getChildren().add(buttonBox);
+
+        // Table to show orders
+        TableView<OrderItem> ordersTable = new TableView<>();
+        ordersTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        TableColumn<OrderItem, String> orderIdColumn = new TableColumn<>("Order ID");
+        orderIdColumn.setCellValueFactory(new PropertyValueFactory<>("orderId"));
+
+        TableColumn<OrderItem, String> orderDetailsColumn = new TableColumn<>("Order Details");
+        orderDetailsColumn.setCellValueFactory(new PropertyValueFactory<>("orderDetails"));
+
+        ordersTable.getColumns().addAll(orderIdColumn, orderDetailsColumn);
+        vbox.getChildren().add(ordersTable);
+
         Button backButton = new Button("Back");
         backButton.setStyle(
-                "-fx-pref-width: 150px; -fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px;");
+                "-fx-pref-width: 150px; -fx-background-color: #2196f3; -fx-text-fill: white; -fx-font-size: 14px;");
         backButton.setOnAction(e -> {
             DashboardPage dashboardPage = new DashboardPage(primaryStage, username);
             primaryStage.setTitle("Dashboard");
@@ -72,61 +87,57 @@ public class OrderSummaryPage {
             primaryStage.setFullScreen(true);
         });
 
-        Button okButton = new Button("OK");
-        okButton.setStyle(
-                "-fx-pref-width: 150px; -fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px;");
-        okButton.setOnAction(e -> handleOkButton());
-
-        buttonBox.getChildren().addAll(backButton, okButton);
-        vbox.getChildren().add(buttonBox);
+        HBox backButtonBox = new HBox(backButton);
+        backButtonBox.setAlignment(Pos.CENTER);
+        backButtonBox.setPadding(new Insets(10, 0, 0, 0));
+        vbox.getChildren().add(backButtonBox);
 
         return vbox;
     }
 
-    private void updateTotal() {
-        double total = 0;
-        for (OrderPage.OrderItem item : OrderData.orders) {
-            total += item.getTotalPrice();
-        }
-        totalLabel.setText(String.format("Total: $%.2f", total));
-    }
-
-    private void handleOkButton() {
-        double totalAmount = 0;
-        for (OrderPage.OrderItem item : OrderData.orders) {
-            totalAmount += item.getTotalPrice();
-        }
-
+    private void showOrders(String status) {
+        ObservableList<OrderItem> orders = FXCollections.observableArrayList();
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
         String dbUsername = "root";
         String dbPassword = "root";
-        String query = "INSERT INTO orders (orderDetails, status, user, total) VALUES (?, 'Active', ?, ?)";
+        String query = "SELECT orderId, orderDetails FROM orders WHERE user = ? AND status = ?";
+
         try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
                 PreparedStatement pstmt = connection.prepareStatement(query)) {
 
-            String orderDetails = OrderData.orders.stream()
-                    .map(order -> order.getItem() + " x " + order.getQuantity())
-                    .reduce((order1, order2) -> order1 + ", " + order2)
-                    .orElse("");
+            pstmt.setString(1, username);
+            pstmt.setString(2, status);
+            ResultSet rs = pstmt.executeQuery();
 
-            pstmt.setString(1, orderDetails);
-            pstmt.setString(2, username);
-            pstmt.setDouble(3, totalAmount);
-
-            pstmt.executeUpdate();
-            System.out.println("DONE!!");
+            while (rs.next()) {
+                String orderId = rs.getString("orderId");
+                String orderDetails = rs.getString("orderDetails");
+                orders.add(new OrderItem(orderId, orderDetails));
+            }
 
         } catch (SQLException e) {
             e.printStackTrace();
-            System.out.println("NONE!!!");
         }
+
+        TableView<OrderItem> ordersTable = (TableView<OrderItem>) view.getChildren().get(2);
+        ordersTable.setItems(orders);
     }
 
-    private void showAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+    public static class OrderItem {
+        private final String orderId;
+        private final String orderDetails;
+
+        public OrderItem(String orderId, String orderDetails) {
+            this.orderId = orderId;
+            this.orderDetails = orderDetails;
+        }
+
+        public String getOrderId() {
+            return orderId;
+        }
+
+        public String getOrderDetails() {
+            return orderDetails;
+        }
     }
 }

@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ExportPage {
     private Stage primaryStage;
@@ -154,33 +155,58 @@ public class ExportPage {
 
     private void handlePay(String cardNumber, String cvv, String expiryDate, boolean useCredits) {
         if (validateCardDetails(cardNumber, cvv, expiryDate)) {
-            double discount = 0;
-            int newCreditsBalance = availableCredits;
-            if (useCredits) {
-                int creditsToUse = Math.min(availableCredits, (int) (totalAmount * 100));
-                discount = creditsToUse / 100.0;
-                totalAmount -= discount;
-                newCreditsBalance -= creditsToUse;
+            TextInputDialog dateDialog = new TextInputDialog();
+            dateDialog.setTitle("Enter Current Date");
+            dateDialog.setHeaderText("Please enter the current date in YYYY-MM-DD format:");
+            dateDialog.setContentText("Date:");
+
+            TextInputDialog timeDialog = new TextInputDialog();
+            timeDialog.setTitle("Enter Current Time");
+            timeDialog.setHeaderText("Please enter the current time in HH:MM format:");
+            timeDialog.setContentText("Time:");
+
+            String currentDate = dateDialog.showAndWait().orElse("");
+            String currentTime = timeDialog.showAndWait().orElse("");
+
+            if (!currentDate.isEmpty() && !currentTime.isEmpty() && validateDateTime(currentDate, currentTime)) {
+                String dateTime = currentDate + " " + currentTime + ":00";
+
+                double discount = 0;
+                int newCreditsBalance = availableCredits;
+                if (useCredits) {
+                    int creditsToUse = Math.min(availableCredits, (int) (totalAmount * 100));
+                    discount = creditsToUse / 100.0;
+                    totalAmount -= discount;
+                    newCreditsBalance -= creditsToUse;
+                }
+
+                // Insert order details into the orders table with the current date and time
+                insertOrderDetails(dateTime);
+
+                showAlert("Payment Successful",
+                        "Your payment has been processed successfully. Total amount paid: $"
+                                + String.format("%.2f", totalAmount));
+
+                // Clear orders and add credits
+                OrderData.orders.clear();
+                int creditsEarned = (int) totalAmount;
+                addCredits(creditsEarned);
+
+                updateCredits(newCreditsBalance + creditsEarned);
+
+                // Show alert for collection time
+                int waitingTime = fetchWaitingTime();
+                String collectionTime = calculateCollectionTime(currentDate, currentTime, waitingTime);
+                showAlert("Order Collection Information",
+                        "You can collect your order after " + collectionTime + ".");
+
+                DashboardPage dashboardPage = new DashboardPage(primaryStage, username);
+                primaryStage.setTitle("Dashboard");
+                primaryStage.setScene(new Scene(dashboardPage.getView()));
+                primaryStage.setFullScreen(true);
+            } else {
+                showAlert("Invalid Date/Time", "Please enter valid date and time in the specified formats.");
             }
-
-            // Insert order details into the orders table
-            insertOrderDetails();
-
-            showAlert("Payment Successful",
-                    "Your payment has been processed successfully. Total amount paid: $"
-                            + String.format("%.2f", totalAmount));
-
-            // Clear orders and add credits
-            OrderData.orders.clear();
-            int creditsEarned = (int) totalAmount;
-            addCredits(creditsEarned);
-
-            updateCredits(newCreditsBalance + creditsEarned);
-
-            DashboardPage dashboardPage = new DashboardPage(primaryStage, username);
-            primaryStage.setTitle("Dashboard");
-            primaryStage.setScene(new Scene(dashboardPage.getView()));
-            primaryStage.setFullScreen(true);
         } else {
             showAlert("Invalid Card Details", "Please enter valid card details.");
         }
@@ -190,22 +216,31 @@ public class ExportPage {
         return cardNumber.matches("\\d{16}") && cvv.matches("\\d{3}") && expiryDate.matches("(0[1-9]|1[0-2])/\\d{4}");
     }
 
-    private void insertOrderDetails() {
+    private boolean validateDateTime(String date, String time) {
+        return date.matches("\\d{4}-\\d{2}-\\d{2}") && time.matches("\\d{2}:\\d{2}");
+    }
+
+    public void insertOrderDetails(String dateTime) {
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
         String dbUsername = "root";
         String dbPassword = "root";
-        String query = "INSERT INTO orders (orderDetails, status, user, total) VALUES (?, 'Delivered', ?, ?)";
+        String query = "INSERT INTO orders (orderDetails, status, user, total, dates, waitTime) VALUES (?, 'Active', ?, ?, ?, ?)";
+
         try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
                 PreparedStatement pstmt = connection.prepareStatement(query)) {
-
             String orderDetails = OrderData.orders.stream()
                     .map(order -> order.getItem() + " x " + order.getQuantity())
-                    .reduce((order1, order2) -> order1 + ", " + order2)
-                    .orElse("");
+                    .collect(Collectors.joining(", "));
+
+            int waitTime = OrderData.orders.stream()
+                    .mapToInt(OrderPage.OrderItem::getWaitTime)
+                    .sum();
 
             pstmt.setString(1, orderDetails);
             pstmt.setString(2, username);
             pstmt.setDouble(3, totalAmount);
+            pstmt.setString(4, dateTime);
+            pstmt.setInt(5, waitTime);
 
             pstmt.executeUpdate();
             System.out.println("DONE!!");
@@ -294,5 +329,59 @@ public class ExportPage {
         }
 
         return orderHistory;
+    }
+
+    // Fetch the waiting time from the database
+    private int fetchWaitingTime() {
+        String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
+        String dbUsername = "root";
+        String dbPassword = "root";
+        String query = "SELECT waitTime FROM orders WHERE user = ? AND status = 'Active'"; // Assuming there's only
+                                                                                           // one row with id = 1
+        try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
+                PreparedStatement pstmt = connection.prepareStatement(query)) {
+
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt("waitTime");
+
+            }
+            System.out.println("YES");
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("NO");
+        }
+
+        return 30; // Default waiting time if not found in the database
+    }
+
+    // Calculate collection time by adding waiting time to the current time
+    private String calculateCollectionTime(String currentDate, String currentTime, int waitingTime) {
+        String[] dateParts = currentDate.split("-");
+        String[] timeParts = currentTime.split(":");
+
+        int year = Integer.parseInt(dateParts[0]);
+        int month = Integer.parseInt(dateParts[1]);
+        int day = Integer.parseInt(dateParts[2]);
+        int hour = Integer.parseInt(timeParts[0]);
+        int minute = Integer.parseInt(timeParts[1]);
+
+        // Adding the fetched waiting time for order preparation
+        minute += waitingTime;
+        if (minute >= 60) {
+            hour += minute / 60;
+            minute %= 60;
+        }
+        if (hour >= 24) {
+            hour %= 24;
+            day += 1;
+            // Simplified approach for incrementing the day without considering month-end
+            // adjustments (this can be refined further for real applications)
+        }
+
+        return String.format("%04d-%02d-%02d %02d:%02d:00", year, month, day, hour, minute);
     }
 }
