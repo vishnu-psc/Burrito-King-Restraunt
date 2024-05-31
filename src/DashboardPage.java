@@ -79,9 +79,8 @@ public class DashboardPage {
                 HBox rightBox = new HBox();
                 rightBox.setAlignment(Pos.CENTER_RIGHT);
 
-                // Conditionally add the Upgrade button if the user is not VIP
+                // if vip then show upgrade button or vice versa
                 if (!isVip) {
-                        // Upgrade button with crown emoji
                         Button upgradeButton = new Button("👑 Upgrade");
                         upgradeButton.setStyle(
                                         "-fx-background-color: #FFD700; -fx-text-fill: black; -fx-font-size: 14px;");
@@ -96,7 +95,6 @@ public class DashboardPage {
                         HBox.setMargin(upgradeButton, new Insets(0, 10, 0, 0));
                 }
 
-                // Log Out button and function which trigger by clicking it
                 Button logOutButton = new Button("Log Out");
                 logOutButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px;");
                 logOutButton.setOnAction(e -> {
@@ -118,7 +116,6 @@ public class DashboardPage {
                 grid.setVgap(10);
                 grid.setPadding(new Insets(20, 20, 20, 20));
 
-                // Click on edit profile button takes you to edit profile page
                 Button editProfileButton = new Button("Edit Profile");
                 editProfileButton.setStyle(
                                 "-fx-pref-width: 200px; -fx-background-color: #2b7087; -fx-text-fill: white; -fx-font-size: 14px;");
@@ -154,8 +151,7 @@ public class DashboardPage {
                 });
                 grid.add(exportOrdersButton, 0, 3);
 
-                // Takes you to awaited orders page
-                Button awaitedOrdersButton = new Button("Awaited Orders");
+                Button awaitedOrdersButton = new Button("Active Orders");
                 awaitedOrdersButton.setStyle(
                                 "-fx-pref-width: 200px; -fx-background-color: #2b7087; -fx-text-fill: white; -fx-font-size: 14px;");
                 awaitedOrdersButton.setOnAction(e -> {

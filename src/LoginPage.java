@@ -36,7 +36,6 @@ public class LoginPage {
     private BorderPane createView() {
         BorderPane borderPane = new BorderPane();
 
-        // Title
         Label titleLabel = new Label("Welcome to Burrito King");
         titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 24));
         HBox titleBox = new HBox(titleLabel);
@@ -152,8 +151,8 @@ public class LoginPage {
 
     private boolean validateLogin(String username, String password) {
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
-        String dbUsername = "root"; // Update with your database username
-        String dbPassword = "root"; // Update with your database password
+        String dbUsername = "root";
+        String dbPassword = "root";
 
         String query = "SELECT * FROM users WHERE username = ? AND password = ?";
 
@@ -171,8 +170,8 @@ public class LoginPage {
 
     private boolean registerUser(String firstName, String lastName, String username, String password) {
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
-        String dbUsername = "root"; // Update with your database username
-        String dbPassword = "root"; // Update with your database password
+        String dbUsername = "root";
+        String dbPassword = "root";
 
         String query = "INSERT INTO users (firstname, lastname, username, password) VALUES (?, ?, ?, ?)";
 

@@ -8,9 +8,10 @@ import javafx.stage.Stage;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class ExportPage {
     private Stage primaryStage;
@@ -20,12 +21,14 @@ public class ExportPage {
     private int availableCredits;
     private Label totalLabel;
     private CheckBox useCreditsCheckBox;
+    private boolean isVip;
 
     public ExportPage(Stage primaryStage, String username) {
         this.primaryStage = primaryStage;
         this.username = username;
         this.totalAmount = calculateTotalAmount();
         this.availableCredits = fetchAvailableCredits();
+        this.isVip = fetchIsVip();
         this.view = createView();
         primaryStage.setTitle("Pay");
         primaryStage.setFullScreen(true);
@@ -84,23 +87,23 @@ public class ExportPage {
         expiryDateField.setStyle("-fx-pref-width: 100px; -fx-font-size: 14px;");
         grid.add(expiryDateField, 1, 4);
 
-        // Credit points section
-        useCreditsCheckBox = new CheckBox("Use Credit Points");
-        useCreditsCheckBox.setStyle("-fx-font-size: 14px;");
-        grid.add(useCreditsCheckBox, 0, 5);
+        if (isVip) {
+            useCreditsCheckBox = new CheckBox("Use Credit Points");
+            useCreditsCheckBox.setStyle("-fx-font-size: 14px;");
+            grid.add(useCreditsCheckBox, 0, 5);
 
-        Label creditsLabel = new Label("Available Credits: " + availableCredits);
-        creditsLabel.setStyle("-fx-font-size: 14px;");
-        grid.add(creditsLabel, 1, 5);
+            Label creditsLabel = new Label("Available Credits: " + availableCredits);
+            creditsLabel.setStyle("-fx-font-size: 14px;");
+            grid.add(creditsLabel, 1, 5);
 
-        // Add listener to update total amount when checkbox is toggled
-        useCreditsCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> updateTotalAmount());
+            useCreditsCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> updateTotalAmount());
+        }
 
         Button payButton = new Button("Pay");
         payButton.setStyle(
                 "-fx-pref-width: 100px; -fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px;");
         payButton.setOnAction(e -> handlePay(cardNumberField.getText(), cvvField.getText(), expiryDateField.getText(),
-                useCreditsCheckBox.isSelected()));
+                isVip && useCreditsCheckBox.isSelected()));
         grid.add(payButton, 1, 6);
 
         Button backButton = new Button("Back");
@@ -144,69 +147,90 @@ public class ExportPage {
         return 0;
     }
 
+    private boolean fetchIsVip() {
+        String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
+        String dbUsername = "root";
+        String dbPassword = "root";
+        String query = "SELECT isVip FROM users WHERE username = ?";
+        try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
+                PreparedStatement pstmt = connection.prepareStatement(query)) {
+
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getBoolean("isVip");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
     private void updateTotalAmount() {
         double discount = 0;
-        if (useCreditsCheckBox.isSelected()) {
+        if (useCreditsCheckBox != null && useCreditsCheckBox.isSelected()) {
             int creditsToUse = Math.min(availableCredits, (int) (totalAmount * 100));
             discount = creditsToUse / 100.0;
         }
         totalLabel.setText("Total Amount: $" + String.format("%.2f", (totalAmount - discount)));
     }
 
+    private void updateLastOrderStatusToActive() {
+        String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
+        String dbUsername = "root";
+        String dbPassword = "root";
+        String query = "UPDATE orders SET status = 'Active' WHERE user = ? ORDER BY orderID DESC LIMIT 1";
+        try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
+                PreparedStatement pstmt = connection.prepareStatement(query)) {
+
+            pstmt.setString(1, username);
+            pstmt.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void handlePay(String cardNumber, String cvv, String expiryDate, boolean useCredits) {
         if (validateCardDetails(cardNumber, cvv, expiryDate)) {
-            TextInputDialog dateDialog = new TextInputDialog();
-            dateDialog.setTitle("Enter Current Date");
-            dateDialog.setHeaderText("Please enter the current date in YYYY-MM-DD format:");
-            dateDialog.setContentText("Date:");
+            double discount = 0;
+            int newCreditsBalance = availableCredits;
+            if (useCredits) {
+                int creditsToUse = Math.min(availableCredits, (int) (totalAmount * 100));
+                discount = creditsToUse / 100.0;
+                totalAmount -= discount;
+                newCreditsBalance -= creditsToUse;
+            }
 
-            TextInputDialog timeDialog = new TextInputDialog();
-            timeDialog.setTitle("Enter Current Time");
-            timeDialog.setHeaderText("Please enter the current time in HH:MM format:");
-            timeDialog.setContentText("Time:");
+            showAlert("Payment Successful",
+                    "Your payment has been processed successfully. Total amount paid: $"
+                            + String.format("%.2f", totalAmount));
 
-            String currentDate = dateDialog.showAndWait().orElse("");
-            String currentTime = timeDialog.showAndWait().orElse("");
+            updateLastOrderStatusToActive();
 
-            if (!currentDate.isEmpty() && !currentTime.isEmpty() && validateDateTime(currentDate, currentTime)) {
-                String dateTime = currentDate + " " + currentTime + ":00";
+            OrderData.orders.clear();
 
-                double discount = 0;
-                int newCreditsBalance = availableCredits;
-                if (useCredits) {
-                    int creditsToUse = Math.min(availableCredits, (int) (totalAmount * 100));
-                    discount = creditsToUse / 100.0;
-                    totalAmount -= discount;
-                    newCreditsBalance -= creditsToUse;
-                }
-
-                // Insert order details into the orders table with the current date and time
-                insertOrderDetails(dateTime);
-
-                showAlert("Payment Successful",
-                        "Your payment has been processed successfully. Total amount paid: $"
-                                + String.format("%.2f", totalAmount));
-
-                // Clear orders and add credits
-                OrderData.orders.clear();
+            if (isVip) {
                 int creditsEarned = (int) totalAmount;
                 addCredits(creditsEarned);
-
                 updateCredits(newCreditsBalance + creditsEarned);
-
-                // Show alert for collection time
-                int waitingTime = fetchWaitingTime();
-                String collectionTime = calculateCollectionTime(currentDate, currentTime, waitingTime);
-                showAlert("Order Collection Information",
-                        "You can collect your order after " + collectionTime + ".");
-
-                DashboardPage dashboardPage = new DashboardPage(primaryStage, username);
-                primaryStage.setTitle("Dashboard");
-                primaryStage.setScene(new Scene(dashboardPage.getView()));
-                primaryStage.setFullScreen(true);
             } else {
-                showAlert("Invalid Date/Time", "Please enter valid date and time in the specified formats.");
+                updateCredits(newCreditsBalance);
             }
+
+            // Show alert for collection time
+            int waitingTime = fetchWaitingTime();
+            String collectionTime = calculateCollectionTime(waitingTime);
+            showAlert("Order Collection Information",
+                    "You can collect your order after " + collectionTime + ".");
+
+            DashboardPage dashboardPage = new DashboardPage(primaryStage, username);
+            primaryStage.setTitle("Dashboard");
+            primaryStage.setScene(new Scene(dashboardPage.getView()));
+            primaryStage.setFullScreen(true);
         } else {
             showAlert("Invalid Card Details", "Please enter valid card details.");
         }
@@ -216,42 +240,7 @@ public class ExportPage {
         return cardNumber.matches("\\d{16}") && cvv.matches("\\d{3}") && expiryDate.matches("(0[1-9]|1[0-2])/\\d{4}");
     }
 
-    private boolean validateDateTime(String date, String time) {
-        return date.matches("\\d{4}-\\d{2}-\\d{2}") && time.matches("\\d{2}:\\d{2}");
-    }
-
-    public void insertOrderDetails(String dateTime) {
-        String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
-        String dbUsername = "root";
-        String dbPassword = "root";
-        String query = "INSERT INTO orders (orderDetails, status, user, total, dates, waitTime) VALUES (?, 'Active', ?, ?, ?, ?)";
-
-        try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
-                PreparedStatement pstmt = connection.prepareStatement(query)) {
-            String orderDetails = OrderData.orders.stream()
-                    .map(order -> order.getItem() + " x " + order.getQuantity())
-                    .collect(Collectors.joining(", "));
-
-            int waitTime = OrderData.orders.stream()
-                    .mapToInt(OrderPage.OrderItem::getWaitTime)
-                    .sum();
-
-            pstmt.setString(1, orderDetails);
-            pstmt.setString(2, username);
-            pstmt.setDouble(3, totalAmount);
-            pstmt.setString(4, dateTime);
-            pstmt.setInt(5, waitTime);
-
-            pstmt.executeUpdate();
-            System.out.println("DONE!!");
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            System.out.println("NONE!!!");
-        }
-    }
-
-    // Updates points(also vip credits) in database
+    // Updates points in database
     private void updateCredits(int newCredits) {
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
         String dbUsername = "root";
@@ -281,7 +270,7 @@ public class ExportPage {
         alert.showAndWait();
     }
 
-    // Method to generate a CSV file with order history
+    // To generate csv file
     private void generateOrderHistoryCSV() {
         List<String[]> orderHistory = fetchOrderHistory();
 
@@ -300,7 +289,7 @@ public class ExportPage {
         }
     }
 
-    // Method to fetch order history from the database
+    // to fetch history from database
     private List<String[]> fetchOrderHistory() {
         List<String[]> orderHistory = new ArrayList<>();
 
@@ -331,13 +320,12 @@ public class ExportPage {
         return orderHistory;
     }
 
-    // Fetch the waiting time from the database
+    // the waiting time from the database
     private int fetchWaitingTime() {
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
         String dbUsername = "root";
         String dbPassword = "root";
-        String query = "SELECT waitTime FROM orders WHERE user = ? AND status = 'Active'"; // Assuming there's only
-                                                                                           // one row with id = 1
+        String query = "SELECT waitTime FROM orders WHERE user = ? AND status = 'Active' ORDER BY waitTime DESC LIMIT 1";
         try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
                 PreparedStatement pstmt = connection.prepareStatement(query)) {
 
@@ -346,42 +334,20 @@ public class ExportPage {
 
             if (rs.next()) {
                 return rs.getInt("waitTime");
-
             }
-            System.out.println("YES");
 
         } catch (SQLException e) {
             e.printStackTrace();
-            System.out.println("NO");
         }
 
-        return 30; // Default waiting time if not found in the database
+        return 0;
     }
 
-    // Calculate collection time by adding waiting time to the current time
-    private String calculateCollectionTime(String currentDate, String currentTime, int waitingTime) {
-        String[] dateParts = currentDate.split("-");
-        String[] timeParts = currentTime.split(":");
+    // adding wait time to current time
+    private String calculateCollectionTime(int waitingTime) {
+        LocalDateTime currentTime = LocalDateTime.now();
+        LocalDateTime collectionTime = currentTime.plusMinutes(waitingTime);
 
-        int year = Integer.parseInt(dateParts[0]);
-        int month = Integer.parseInt(dateParts[1]);
-        int day = Integer.parseInt(dateParts[2]);
-        int hour = Integer.parseInt(timeParts[0]);
-        int minute = Integer.parseInt(timeParts[1]);
-
-        // Adding the fetched waiting time for order preparation
-        minute += waitingTime;
-        if (minute >= 60) {
-            hour += minute / 60;
-            minute %= 60;
-        }
-        if (hour >= 24) {
-            hour %= 24;
-            day += 1;
-            // Simplified approach for incrementing the day without considering month-end
-            // adjustments (this can be refined further for real applications)
-        }
-
-        return String.format("%04d-%02d-%02d %02d:%02d:00", year, month, day, hour, minute);
+        return collectionTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 }

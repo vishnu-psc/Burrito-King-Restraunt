@@ -100,7 +100,7 @@ public class EditProfilePage {
         }
 
         primaryStage.setScene(new Scene(new DashboardPage(primaryStage, username).getView()));
-        primaryStage.setFullScreen(true); // Ensure full screen mode is set here
+        primaryStage.setFullScreen(true);
         primaryStage.setTitle("Dashboard");
     }
 

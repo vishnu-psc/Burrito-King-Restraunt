@@ -12,6 +12,10 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.sql.Timestamp;
+
+import java.util.stream.Collectors;
 
 public class OrderPage {
     private Stage primaryStage;
@@ -69,7 +73,6 @@ public class OrderPage {
         addToBasketButton.setOnAction(e -> handleAddToBasket());
         grid.add(addToBasketButton, 1, 2);
 
-        // Total price label
         totalLabel = new Label("Total: $0.00");
         totalLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #333333;");
         grid.add(totalLabel, 1, 3);
@@ -113,7 +116,7 @@ public class OrderPage {
             }
         });
         basketView.setPrefHeight(200);
-        basketView.setStyle("-fx-pref-width: 700px; -fx-font-size: 14px;"); // Increased width
+        basketView.setStyle("-fx-pref-width: 700px; -fx-font-size: 14px;");
         grid.add(new Label("Basket:"), 0, 4);
         grid.add(basketView, 1, 4);
 
@@ -135,7 +138,7 @@ public class OrderPage {
                 });
         grid.add(backButton, 1, 6);
 
-        updateTotal(); // Ensure the total is updated when the view is created
+        updateTotal();
 
         return grid;
     }
@@ -161,16 +164,60 @@ public class OrderPage {
     private void handleCheckout() {
         if (!basket.isEmpty()) {
             int totalWaitTime = basket.stream().mapToInt(OrderItem::getTotalWaitTime).sum();
-            OrderData.orders.addAll(basket);
-            comboBox.getSelectionModel().clearSelection();
-            quantityField.clear();
-            basket.clear();
-            updateTotal();
-            showAlert("Order Placed", String
-                    .format("Your order has been placed successfully. Preparing time: %d minutes.", totalWaitTime));
+            double totalAmount = basket.stream().mapToDouble(OrderItem::getTotalPrice).sum();
+            String orderDetails = basket.stream()
+                    .map(orderItem -> String.format("%s x%d", orderItem.getItem(), orderItem.getQuantity()))
+                    .collect(Collectors.joining(", "));
+
+            int orderId = saveOrderToDatabase(orderDetails, totalWaitTime, totalAmount);
+
+            if (orderId != -1) {
+                OrderData.orders.addAll(basket);
+                comboBox.getSelectionModel().clearSelection();
+                quantityField.clear();
+                basket.clear();
+                updateTotal();
+                showAlert("Order Placed",
+                        String.format("Your order (ID: %d) has been placed successfully. Preparing time: %d minutes.",
+                                orderId, totalWaitTime));
+            } else {
+                showAlert("Order Failed", "There was an issue placing your order. Please try again.");
+            }
         } else {
             showAlert("Empty Basket", "Your basket is empty. Please add items to the basket.");
         }
+    }
+
+    private int saveOrderToDatabase(String orderDetails, int totalWaitTime, double totalAmount) {
+        String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
+        String dbUsername = "root";
+        String dbPassword = "root";
+        String query = "INSERT INTO orders (orderDetails, status, user, total, dates, waitTime) VALUES (?, 'Placed', ?, ?, ?, ?)";
+        int orderId = -1;
+        // current dateTime is pushrd in formate of dateTime dataType
+        LocalDateTime currentDateTime = LocalDateTime.now();
+
+        try (Connection connection = DriverManager.getConnection(url, dbUsername, dbPassword);
+                PreparedStatement pstmt = connection.prepareStatement(query, PreparedStatement.RETURN_GENERATED_KEYS)) {
+
+            pstmt.setString(1, orderDetails);
+            pstmt.setString(2, username);
+            pstmt.setDouble(3, totalAmount);
+            pstmt.setTimestamp(4, Timestamp.valueOf(currentDateTime)); // Set dateTime field to null for now
+            pstmt.setInt(5, totalWaitTime);
+
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows > 0) {
+                ResultSet rs = pstmt.getGeneratedKeys();
+                if (rs.next()) {
+                    orderId = rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return orderId;
     }
 
     private void updateTotal() {
@@ -182,7 +229,6 @@ public class OrderPage {
     }
 
     // Price of everything and also in case of vip user meal amount reduced to 18
-    // AUD
     private double getItemPrice(String item) {
         switch (item) {
             case "Burrito":

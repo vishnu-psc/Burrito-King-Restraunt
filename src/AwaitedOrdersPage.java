@@ -89,7 +89,6 @@ public class AwaitedOrdersPage {
 
         borderPane.setCenter(grid);
 
-        // Add back button
         Button backButton = new Button("Back");
         styleButton(backButton, "#2196f3");
         backButton.setOnAction(e -> {
@@ -107,6 +106,7 @@ public class AwaitedOrdersPage {
         return borderPane;
     }
 
+    // To update status to collected or canceled
     private void updateOrderStatus(String orderId, String status) {
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
         String dbUsername = "root";

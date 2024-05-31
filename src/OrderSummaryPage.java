@@ -8,7 +8,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -37,6 +36,7 @@ public class OrderSummaryPage {
         return view;
     }
 
+    @SuppressWarnings({ "deprecation", "unchecked" })
     private VBox createView() {
         VBox vbox = new VBox();
         vbox.setAlignment(Pos.CENTER);
@@ -95,6 +95,8 @@ public class OrderSummaryPage {
         return vbox;
     }
 
+    // just fetching table from database
+    @SuppressWarnings("unchecked")
     private void showOrders(String status) {
         ObservableList<OrderItem> orders = FXCollections.observableArrayList();
         String url = "jdbc:mysql://localhost:3306/BurritoKingDB";
