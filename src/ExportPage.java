@@ -270,15 +270,18 @@ public class ExportPage {
         alert.showAndWait();
     }
 
-    // To generate csv file
+    // To generate CSV file
     private void generateOrderHistoryCSV() {
         List<String[]> orderHistory = fetchOrderHistory();
 
         try (FileWriter csvWriter = new FileWriter("OrderHistory_" + username + ".csv")) {
             csvWriter.append("Order ID,Order Details,Status,Total\n");
             for (String[] order : orderHistory) {
-                csvWriter.append(String.join(",", order));
-                csvWriter.append("\n");
+                // Enclose orderDetails in double quotes to handle commas within the text
+                csvWriter.append(order[0]).append(',')
+                        .append('"').append(order[1]).append('"').append(',')
+                        .append(order[2]).append(',')
+                        .append(order[3]).append('\n');
             }
             csvWriter.flush();
 

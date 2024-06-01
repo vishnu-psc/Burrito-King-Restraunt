@@ -180,6 +180,12 @@ public class OrderPage {
                 showAlert("Order Placed",
                         String.format("Your order (ID: %d) has been placed successfully. Preparing time: %d minutes.",
                                 orderId, totalWaitTime));
+                // redirecting to export page
+                ExportPage exportPage = new ExportPage(primaryStage, username);
+                primaryStage.setTitle("Export Orders");
+                primaryStage.setScene(new Scene(exportPage.getView()));
+                primaryStage.setFullScreen(true);
+
             } else {
                 showAlert("Order Failed", "There was an issue placing your order. Please try again.");
             }
